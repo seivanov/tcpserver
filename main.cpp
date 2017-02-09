@@ -5,11 +5,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "QueryHandler.h"
 
-#define MAX_SIZE 50
-#define NUM_CLIENT 5
-
-void *connection_handler(void *socket_desc);
+void *connection_handler(void *);
+void message_exec(char *, int);
 
 int main() {
 
@@ -31,8 +30,6 @@ int main() {
     /* connecting socket */
     listen (server_sockfd, 128);
     while(1) {
-
-        char *ch;
 
         printf("server waiting\n");
 
@@ -57,21 +54,40 @@ int main() {
 void *connection_handler(void *client_sockfd)
 {
 
-    int sockfd = *((int *)client_sockfd);
+    const unsigned int MAXMSG = 1024;
 
-    printf("from thread \n");
+    int sockfd = *((int *)client_sockfd);
+    char buffer[MAXMSG];
+    ssize_t nbytes;
 
     while(1) {
 
-        char *ch;
-
-        if(read(sockfd, &ch, 1) == 0)
+        nbytes = read(sockfd, buffer, MAXMSG-1);
+        if (nbytes < 0 || nbytes == 0) {
             break;
+        } else {
 
-        printf("%c , %d\n",ch,ch);
+            buffer[nbytes] = '\0';
+            char *p = strtok(buffer, "\r\n");
+            if(p) {
+                fprintf(stderr, "Server: got message: `%s'\n", p);
+                message_exec(p, sockfd);
+            }
+
+        }
 
     }
 
-    printf("end thread \n");
+}
+
+void message_exec(char *msg, int sockfd) {
+
+    if(!strcmp(msg, "test")) {
+
+        fprintf(stderr, "Server: UPS: \n");
+        char b[] = "hello test";
+        write(sockfd, &b, strlen(b));
+
+    }
 
 }
