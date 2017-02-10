@@ -10,3 +10,8 @@ set(SOURCE_FILES main.cpp QueryHandler.cpp QueryHandler.h)
 add_executable(webserver ${SOURCE_FILES})
 target_link_libraries (webserver ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries (webserver ${OPENSSL_LIBRARIES})
+
+if(APPLE)
+    message(STATUS ">>> Apple")
+    include_directories(/usr/local/opt/openssl/include/)
+endif()

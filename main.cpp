@@ -8,13 +8,14 @@
 
 #include <fcntl.h>
 
+#include <errno.h>
 
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 
 #include "QueryHandler.h"
 
-using namespace std;
+//using namespace std;
 
 void *connection_handler(void *);
 void message_exec(char *, int);
@@ -22,25 +23,44 @@ void GenKeys(char secret[]);
 
 int main() {
 
-    int server_sockfd, client_sockfd;
+    int server_sockfd, client_sockfd, check;
     unsigned int server_len, client_len;
     struct sockaddr_in server_address, client_address;
     pthread_t sniffer_thread;
 
-    if(!fork()) {
+    //if(!fork()) {
 
         /* open socket */
         server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+        if(!server_sockfd) {
+            printf("error open socket\n");
+            return 1;
+        }
+
+        int flag = 1;
+        setsockopt(server_sockfd, SOL_SOCKET, SO_REUSEPORT, &flag, sizeof(flag));
 
         /* socket setup */
         server_address.sin_family = AF_INET;
         server_address.sin_addr.s_addr = htonl(INADDR_ANY);
         server_address.sin_port = htons(9734);
         server_len = sizeof(server_address);
-        bind(server_sockfd, (struct sockaddr *) &server_address, server_len);
+        check = bind(server_sockfd, (struct sockaddr *) &server_address, server_len);
+
+        if(check == -1) {
+            printf("error bind %d\n", errno);
+            return 1;
+        }
 
         /* connecting socket */
-        listen(server_sockfd, 128);
+        check = listen(server_sockfd, 128);
+
+        if(check == -1) {
+            printf("error listen %d\n", errno);
+            return 1;
+        }
+
         while (1) {
 
             printf("server waiting\n");
@@ -61,8 +81,10 @@ int main() {
 
         }
 
+    /*
     } else
         return 0;
+    */
 
 }
 
@@ -92,6 +114,8 @@ void *connection_handler(void *client_sockfd)
         }
 
     }
+
+    return (void*)0;
 
 }
 
@@ -130,7 +154,7 @@ void GenKeys(char secret[]){
     RSA_free(rsa);
     fclose(privKey_file);
     fclose(pubKey_file);
-    cout << "Ключи сгенерированы и помещены в папку с исполняемым файлом" << endl;
+    std::cout << "Ключи сгенерированы и помещены в папку с исполняемым файлом" << std::endl;
 }
 
 void Encrypt(){
@@ -160,7 +184,7 @@ void Encrypt(){
         if (outlen != RSA_size(pubKey)) exit(-1);
         write(out, ctext, outlen);
     }
-    cout << "Содержимое файла in.txt было зашифровано и помещено в файл rsa.file" << endl;
+    std::cout << "Содержимое файла in.txt было зашифровано и помещено в файл rsa.file" << std::endl;
 }
 
 void Decrypt(char secret[]){
@@ -190,6 +214,6 @@ void Decrypt(char secret[]){
         if (outlen < 0) exit(0);
         write(out, ptext, outlen);
     }
-    cout << "Содержимое файла rsa.file было дешифровано и помещено в файл out.txt" << endl;
+    std::cout << "Содержимое файла rsa.file было дешифровано и помещено в файл out.txt" << std::endl;
 
 }
